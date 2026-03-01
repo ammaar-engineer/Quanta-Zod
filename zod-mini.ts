@@ -1,19 +1,8 @@
-const obj = {
-    nama: 'lorem',
-    umur: 'ipsum'
-}
-
-interface zmScheme {
-    type: 'string' | 'number'
-    max: number
-    min: number
-}
-type listParam = (raw: any) => boolean
-
-
-
-function mz<T extends string> (data: any, securtyVariaty: Record<T, any>, queue?: Partial<Record<T, ReturnType<typeof qz>>>) {
-    const SECURITY_KEY = Object.keys(securtyVariaty)
+function mz<T extends string> (
+        data: any, 
+        securtyVariaty: Record<T, any>, 
+        queue: Partial<Record<T, ReturnType<typeof qz>>>) 
+    {
     const QUEUE_KEY = Object.keys(queue || {})
 
     let queue_task: Function[] = []
@@ -63,3 +52,78 @@ console.log(mz(
     checkingSecurity, 
     {isSame: qz('amaru', 'not same as expected')}
 ))
+
+
+
+interface optionScheme {
+    optional: boolean
+}
+type boolFunc = (param: any, anparam: any) => boolean
+type obj = Record<string, any>
+
+class oz_initiate<T extends string> {
+    securityMiddleware: Record<T, boolFunc>
+    constructor (securityMiddleware: Record<T, boolFunc>) {
+        this.securityMiddleware = securityMiddleware
+    }
+
+    oz = (obj: obj, expected_obj: Record<any, Partial<Record<T, ReturnType<typeof qz>>>>) => {
+        const securityList = this.securityMiddleware
+        // All keys
+        const SECURITY_LIST_KEY = Object.keys(securityList)
+        const OBJ_KEY = Object.keys(obj)
+        const EXPECTED_OBJ_KEY = Object.keys(expected_obj)
+
+        let isSuccess = true
+        let issue: any[] = []
+
+        // Checking key first
+        for (const key_ex of EXPECTED_OBJ_KEY) {
+            if (!obj[key_ex]) {
+                isSuccess = false
+                issue.push({
+                    loc: key_ex,
+                    errmsg: `Obj ${key_ex} not found`
+                })
+                break
+            }
+            const expectedValue_key = Object.keys(expected_obj[key_ex])
+            for (const list_check_key of expectedValue_key) {
+                const target_func = securityList[list_check_key]
+                const {expectedValue, errmsg} = expected_obj[key_ex][list_check_key]
+                const execute = target_func(obj[key_ex], expectedValue)
+                if (!execute) {
+                    isSuccess = false
+                    issue.push({
+                        loc: key_ex,
+                        onCheck: list_check_key,
+                        errmsg
+                    })
+                    break
+                }
+            }
+        }
+
+        return isSuccess ? {isSuccess, obj} : {isSuccess, issue}
+    }
+}
+
+const mzcl = new oz_initiate(
+    {
+        type: (raw: any, expected: any) => typeof raw == expected,
+        max: (raw: any, expected: any) => raw.toString().length < expected,
+        min: (raw: any, expected: any) => raw.toString().length > expected,
+        isSame: (raw: any, expected: any) => raw == expected,
+        min_num: (raw, expected) => raw > expected
+    }
+)
+console.log(
+    mzcl.oz(
+        {name: 'Ammaar', kelas: 4, sahur: 'sada'}, 
+        {
+            name: {
+                max: qz(9, 'Must be 5 kid'), isSame: qz('Ammaar', 'Not ammar :/'), type: qz('string', 'must string >:(')},
+            kelas: {min_num: qz(2, 'Must be more than 4')}
+        }
+    )
+)

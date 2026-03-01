@@ -1,9 +1,4 @@
-const obj = {
-    nama: 'lorem',
-    umur: 'ipsum'
-};
 function mz(data, securtyVariaty, queue) {
-    const SECURITY_KEY = Object.keys(securtyVariaty);
     const QUEUE_KEY = Object.keys(queue || {});
     let queue_task = [];
     let queue_task_key = [];
@@ -43,3 +38,57 @@ const checkingSecurity = {
 };
 console.log(mz('amaru', checkingSecurity, { max: qz(5, 'max is 5'), type: qz('number', 'must str'), min: qz('1', 'must be 4') }));
 console.log(mz('amara', checkingSecurity, { isSame: qz('amaru', 'not same as expected') }));
+class oz_initiate {
+    constructor(securityMiddleware) {
+        this.oz = (obj, expected_obj) => {
+            const securityList = this.securityMiddleware;
+            // All keys
+            const SECURITY_LIST_KEY = Object.keys(securityList);
+            const OBJ_KEY = Object.keys(obj);
+            const EXPECTED_OBJ_KEY = Object.keys(expected_obj);
+            let isSuccess = true;
+            let issue = [];
+            // Checking key first
+            for (const key_ex of EXPECTED_OBJ_KEY) {
+                if (!obj[key_ex]) {
+                    isSuccess = false;
+                    issue.push({
+                        loc: key_ex,
+                        errmsg: `Obj ${key_ex} not found`
+                    });
+                    break;
+                }
+                const expectedValue_key = Object.keys(expected_obj[key_ex]);
+                for (const list_check_key of expectedValue_key) {
+                    const target_func = securityList[list_check_key];
+                    const { expectedValue, errmsg } = expected_obj[key_ex][list_check_key];
+                    const execute = target_func(obj[key_ex], expectedValue);
+                    if (!execute) {
+                        isSuccess = false;
+                        issue.push({
+                            loc: key_ex,
+                            onCheck: list_check_key,
+                            errmsg
+                        });
+                        break;
+                    }
+                }
+            }
+            return isSuccess ? { isSuccess, obj } : { isSuccess, issue };
+        };
+        this.securityMiddleware = securityMiddleware;
+    }
+}
+const mzcl = new oz_initiate({
+    type: (raw, expected) => typeof raw == expected,
+    max: (raw, expected) => raw.toString().length < expected,
+    min: (raw, expected) => raw.toString().length > expected,
+    isSame: (raw, expected) => raw == expected,
+    min_num: (raw, expected) => raw > expected
+});
+console.log(mzcl.oz({ name: 'Ammaar', kelas: 4, sahur: 'sada' }, {
+    name: {
+        max: qz(9, 'Must be 5 kid'), isSame: qz('Ammaar', 'Not ammar :/'), type: qz('string', 'must string >:(')
+    },
+    kelas: { min_num: qz(2, 'Must be more than 4') }
+}));
